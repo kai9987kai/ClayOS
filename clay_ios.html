@@ -29,6 +29,7 @@ try {
   --clay-btn-bg: linear-gradient(90deg, #a87e59 0%, #e4c197 58%, #c79a71 100%);
   --clay-btn-r-bg: linear-gradient(90deg, #b58c65 0%, #dfba8e 50%, #98704f 100%);
   --spring-ease: linear(0, 0.08 2%, 0.42 6%, 1.12 16%, 1.07 24%, 0.98 38%, 1.01 58%, 1);
+  --clay-bounce: linear(0, 0.04 2%, 0.19 5%, 0.68 10%, 1.16 18%, 1.21 22%, 1.09 29%, 0.96 39%, 0.95 45%, 1.02 58%, 1.01 68%, 0.99 82%, 1);
   --surface-1-light: #f6e4ce;
   --surface-1-dark: #3b2d47;
   --surface-2-light: #fff3e1;
@@ -573,11 +574,20 @@ body {
   display: grid;
   place-items: center;
   overflow: visible; /* CRITICAL: allows notification badges to overlap cleanly without clipping! */
-  transition: transform 0.34s cubic-bezier(0.2, 1.35, 0.5, 1), filter 0.14s ease;
+  /* Fallback when linear() easing is unsupported; otherwise clay bounce curve */
+  transition: transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.14s ease;
   filter: drop-shadow(0 1.45cqw 0 rgba(34, 13, 46, 0.38)) drop-shadow(0 2.3cqw 2.5cqw rgba(16, 6, 30, 0.36));
 }
 @media (prefers-reduced-motion: no-preference) {
-  .app-icon { transition-timing-function: var(--spring-ease), ease; }
+  .app-icon {
+    transition-duration: 0.46s, 0.14s;
+    transition-timing-function: var(--clay-bounce), ease;
+  }
+}
+@supports not (transition-timing-function: linear(0, 1)) {
+  .app-icon, .widget, .toggle::after {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-icon { transition: none; }
@@ -1861,31 +1871,72 @@ body.bench-mat::after {
 
 /* Sculpt Mode Floating Palette inside stage */
 .stage:has(#sculptBar:not([hidden])) .phone-wrap {
-  --phone-h: min(838px, calc(100dvh - 156px), calc((100vw - 32px) * 838 / 414));
+  --phone-h: min(838px, calc(100dvh - 158px), calc((100vw - 32px) * 838 / 414));
 }
 .sculpt-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   padding: 5px 10px;
+  max-width: min(96vw, 760px);
   border-radius: 999px;
   background: rgba(38, 22, 20, 0.85);
   border: 1px solid rgba(255, 228, 194, 0.28);
   color: #f6e2c4;
-  font: 750 11px ui-rounded, system-ui, sans-serif;
+  font: 750 10.5px ui-rounded, system-ui, sans-serif;
 }
 .sculpt-bar[hidden] { display: none; }
 .sculpt-dot {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   border: 2px solid rgba(255, 245, 224, 0.78);
   cursor: pointer;
   padding: 0;
 }
 .sculpt-dot.active { transform: scale(1.2); outline: 2px solid #ffe4b3; outline-offset: 1px; }
+
+/* Interactive Physics & Pottery Simulations */
+.sim-stage {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 34cqh;
+}
+@supports not (content-visibility: auto) {
+  .sim-stage { contain: layout style paint; }
+}
+.sim-canvas {
+  width: 100%;
+  height: 31cqh;
+  border-radius: 4.8cqw;
+  border: 0.55cqw solid rgba(255, 242, 220, 0.68);
+  background: radial-gradient(circle at 30% 18%, #4d3556 0%, #2a1936 72%, #190e24 100%);
+  box-shadow: inset 0 1cqw 2.4cqw rgba(10, 4, 20, 0.55), 0 1cqw 0 rgba(54, 24, 42, 0.25);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+  display: block;
+}
+.sim-canvas.grabbing { cursor: grabbing; }
+.sim-canvas.wire-tool { cursor: crosshair; }
+.sim-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2cqw;
+  font-size: 2.55cqw;
+  font-weight: 850;
+  color: var(--text-muted);
+  margin: 0.7cqh 0;
+}
+.sim-chip {
+  padding: 0.55cqw 2cqw;
+  border-radius: 999px;
+  background: light-dark(rgba(148, 100, 108, 0.16), rgba(255, 232, 210, 0.12));
+  color: var(--text-main);
+}
 
 /* Music spinning clay disc & playable xylophone jam pad */
 .vinyl-disc {
@@ -2610,6 +2661,8 @@ body.bench-mat::after {
     <span>Sculpt:</span>
     <button class="workshop-pill active" data-sculpt-tool="dent" type="button">Thumb Dent</button>
     <button class="workshop-pill" data-sculpt-tool="blob" type="button">Roll Clay</button>
+    <button class="workshop-pill" data-sculpt-tool="smudge" type="button">Smudge</button>
+    <button class="workshop-pill" data-sculpt-tool="marble" type="button">Marbles</button>
     <button class="workshop-pill" data-sculpt-tool="charm" data-sculpt-charm="★" type="button">★</button>
     <button class="workshop-pill" data-sculpt-tool="charm" data-sculpt-charm="♥" type="button">♥</button>
     <button class="workshop-pill" data-sculpt-tool="charm" data-sculpt-charm="✿" type="button">✿</button>
@@ -3015,8 +3068,27 @@ body.bench-mat::after {
       return beatPlaying;
     }
 
+    function playCeramicTap(freq = 320, bright = 0.5) {
+      const gMax = gainVal() || 0.08;
+      const ac = ensureCtx();
+      if (!ac) return;
+      const now = ac.currentTime;
+      [1, 1.52 + bright * 0.4].forEach((mult, idx) => {
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.type = idx === 0 ? 'sine' : 'triangle';
+        o.frequency.setValueAtTime(freq * mult, now);
+        o.frequency.exponentialRampToValueAtTime(freq * mult * 0.96, now + 0.25);
+        g.gain.setValueAtTime(gMax * (idx === 0 ? 0.42 : 0.14 * bright), now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16 + bright * 0.34);
+        o.connect(g).connect(ac.destination);
+        o.start(now);
+        o.stop(now + 0.55);
+      });
+    }
+
     return {
-      playSquish, playClick, playDTMF, playChime, playMusicNote, toggleMusic, toggleBeat,
+      playSquish, playClick, playDTMF, playChime, playMusicNote, playCeramicTap, toggleMusic, toggleBeat,
       isMusicPlaying: () => musicPlaying,
       isBeatPlaying: () => beatPlaying,
       getTracks: () => tracks,
@@ -3055,7 +3127,9 @@ body.bench-mat::after {
       Calculator: ['#38323d', '#18141c'],
       Reminders: ['#f6e5ce', '#dbc0a2'],
       'Voice Memos': ['#28222c', '#120f15'],
-      'Clay Studio': ['#f7c66c', '#db6c38']
+      'Clay Studio': ['#f7c66c', '#db6c38'],
+      'Pottery Wheel': ['#d97b4b', '#873d24'],
+      'Clay Sandbox': ['#56cab8', '#227c85']
     };
     const [c1, c2] = bases[name] || ['#f4dfc2', '#c89b88'];
 
@@ -3248,6 +3322,23 @@ body.bench-mat::after {
           <circle cx="65" cy="52" r="5.5" fill="#4dbd48"/>
           <circle cx="34" cy="57" r="5" fill="#8b4bc2"/>
         </g>`;
+    } else if (name === 'Pottery Wheel') {
+      glyph = `
+        <g filter="url(#icon-relief)">
+          <ellipse cx="50" cy="73" rx="30" ry="7.5" fill="#70351f"/>
+          <ellipse cx="50" cy="71" rx="28" ry="6.2" fill="#e6c39c"/>
+          <path d="M36 69 C32 57 29 48 35 38 C39 32 40 28 38 24 L62 24 C60 28 61 32 65 38 C71 48 68 57 64 69 Z" fill="url(#${id}cream)"/>
+          <ellipse cx="50" cy="24" rx="12" ry="4" fill="#a84e30"/>
+        </g>`;
+    } else if (name === 'Clay Sandbox') {
+      glyph = `
+        <g filter="url(#icon-relief)">
+          <path d="M22 60 C22 46 34 39 46 43 C54 45 58 34 69 36 C78 38 82 47 79 58 C76 68 65 73 53 71 C43 69 39 74 30 72 C24 70 22 65 22 60 Z" fill="url(#${id}cream)"/>
+          <circle cx="36" cy="53" r="6" fill="#eb5534"/>
+          <circle cx="65" cy="49" r="5.5" fill="#7c47c2"/>
+          <ellipse cx="33" cy="50" rx="2.2" ry="1.3" fill="#fff7ea" opacity="0.8"/>
+          <ellipse cx="62" cy="46" rx="2" ry="1.2" fill="#fff7ea" opacity="0.8"/>
+        </g>`;
     } else {
       glyph = `<circle cx="50" cy="50" r="22" fill="url(#${id}cream)" filter="url(#icon-relief)"/>`;
     }
@@ -3291,7 +3382,7 @@ body.bench-mat::after {
     'Mail', 'Clock', 'Maps', 'Weather',
     'Notes', 'App Store', 'Settings', 'Files'
   ];
-  const EXTRA_APPS = ['Calculator', 'Reminders', 'Voice Memos', 'Clay Studio'];
+  const EXTRA_APPS = ['Calculator', 'Reminders', 'Voice Memos', 'Clay Studio', 'Pottery Wheel', 'Clay Sandbox'];
   const DOCK_APPS = ['Phone', 'Safari', 'Music', 'Photos'];
 
   const screen = $('#screen');
@@ -3319,9 +3410,8 @@ body.bench-mat::after {
     const hidden = new Set(state.hiddenApps || []);
     const base = Array.isArray(state.extraOrder) && state.extraOrder.length
       ? state.extraOrder
-      : [...EXTRA_APPS, ...(state.installedStoreApps || [])];
-    const extra = [...new Set([...base, ...(state.installedStoreApps || [])])].filter(a => !hidden.has(a));
-    return extra;
+      : EXTRA_APPS;
+    return [...new Set([...base, ...EXTRA_APPS, ...(state.installedStoreApps || [])])].filter(a => !hidden.has(a));
   }
 
   function makeAppButton(name, scope = 'dock') {
@@ -3352,9 +3442,9 @@ body.bench-mat::after {
 
     const folders = [
       ['Social & Mail', ['Messages', 'Phone', 'Mail', 'Safari']],
-      ['Creativity', ['Photos', 'Camera', 'Music', 'Clay Studio']],
-      ['Productivity', ['Notes', 'Calendar', 'Reminders', 'Files']],
-      ['Utilities', ['Settings', 'Clock', 'Maps', 'Calculator']]
+      ['Clay Craft & Labs', ['Clay Studio', 'Pottery Wheel', 'Clay Sandbox', 'Music']],
+      ['Media & Notes', ['Photos', 'Camera', 'Notes', 'Reminders']],
+      ['System & Tools', ['Settings', 'Clock', 'Maps', 'Calculator']]
     ];
     libraryGrid.innerHTML = folders.map(([title, list]) => `
       <div class="lib-folder">
@@ -3607,6 +3697,7 @@ body.bench-mat::after {
 
   function openApp(name, sourceBtn = null) {
     if (jiggleMode) return;
+    stopAppSims();
     setDiExpanded(false);
     closeAllOverlays();
     AudioFX.playSquish();
@@ -3652,6 +3743,7 @@ body.bench-mat::after {
 
   function closeApp() {
     if (!activeApp) return;
+    stopAppSims();
     const closingName = activeApp;
     AudioFX.playClick();
 
@@ -4149,9 +4241,72 @@ body.bench-mat::after {
   let studioTab = 'sculpt', studioColor = '#e65525', studioSize = 14, studioTool = 'brush', studioStamp = '★', studioStrokes = [];
   let gameScore = 0, clockAnalogTimer = null, safariBubbleTimer = null;
   let sculptMode = false, sculptTool = 'dent', sculptCharm = '★', sculptColor = '#f1cfa8', sculptSizeScale = 1;
-  const sculptMarks = [], sculptBlobs = [], sculptCharms = [];
+  const sculptMarks = [], sculptBlobs = [], sculptCharms = [], sculptMarbles = [];
+  let stageTiltX = 0, stageTiltY = 0;
+
+  let potteryRaf = 0, potteryAbort = null;
+  let sandboxRaf = 0, sandboxAbort = null;
+  function makePotProfile(preset = 'amphora') {
+    const N = 42;
+    const slices = [];
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      if (preset === 'bowl') slices.push(0.24 + Math.pow(t, 0.72) * 0.56);
+      else if (preset === 'vase') slices.push(0.32 + Math.sin(t * Math.PI * 1.15) * 0.14 - t * 0.08);
+      else slices.push(0.3 + Math.sin(t * Math.PI * 0.92) * 0.34 - Math.sin(t * Math.PI * 2.1) * 0.14 + (t > 0.85 ? (t - 0.85) * 0.85 : 0));
+    }
+    return slices;
+  }
+  const potState = {
+    preset: 'amphora',
+    slices: makePotProfile('amphora'),
+    grooves: new Array(42).fill(0),
+    tool: 'shape',
+    clayHex: '#cb6c47',
+    glazeStage: 0, // 0 Air Clay | 1 Bisque 980°C | 2 Glazed 1220°C
+    glazeColor: '#2d938c',
+    rpm: 0.9,
+    wobble: 0.055,
+    theta: 0,
+    heightScale: 1.0,
+    moisture: 0.84,
+    ringPulse: 0
+  };
+  function createSoftBlob(cx, cy, r, color, swirl = '') {
+    const N = 16;
+    const nodes = [];
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      nodes.push({ x, y, ox: x, oy: y, nx: 0, ny: 0 });
+    }
+    return { cx, cy, ocx: cx, ocy: cy, r, color, swirl, area0: Math.PI * r * r, nodes };
+  }
+  const sbState = {
+    tool: 'grab', // 'grab' | 'squish' | 'cut' | 'merge'
+    zeroG: false,
+    blobs: [
+      createSoftBlob(96, 118, 30, '#e65525'),
+      createSoftBlob(176, 98, 27, '#348de8', '#f2e0c4'),
+      createSoftBlob(238, 128, 25, '#56b938')
+    ]
+  };
+  function stopAppSims() {
+    if (studioAbort) { studioAbort.abort(); studioAbort = null; }
+    if (potteryRaf) { cancelAnimationFrame(potteryRaf); potteryRaf = 0; }
+    if (potteryAbort) { potteryAbort.abort(); potteryAbort = null; }
+    if (sandboxRaf) { cancelAnimationFrame(sandboxRaf); sandboxRaf = 0; }
+    if (sandboxAbort) { sandboxAbort.abort(); sandboxAbort = null; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopAppSims();
+    else if (activeApp === 'Pottery Wheel' || activeApp === 'Clay Sandbox') initAppBehavior(activeApp);
+  });
+
   function renderAppView(name) {
     if (activeApp !== name) return;
+    stopAppSims();
     appLayer.innerHTML = buildAppMarkup(name);
     initAppBehavior(name);
   }
@@ -4164,7 +4319,9 @@ body.bench-mat::after {
     'App Store': 'Install Clay Apps', Settings: 'Customize ClayOS 18', Files: 'Archive & Exports',
     Phone: 'Keypad & Recents', Safari: 'Clay Web Browser', Music: 'Clay Orchestra Synth',
     Calculator: 'Tactile Math', Reminders: 'To-Do Checklist', 'Voice Memos': 'Audio Notes',
-    'Clay Studio': 'Sculpt & Save Wallpapers'
+    'Clay Studio': 'Sculpt, Mix & Marble',
+    'Pottery Wheel': 'Spinning Clay Lathe & Kiln',
+    'Clay Sandbox': 'Soft-Body Squish, Slice & Bounce'
   };
 
   function section(title, body) {
@@ -4492,6 +4649,8 @@ body.bench-mat::after {
         `) : '');
     } else if (name === 'App Store') {
       const catalog = [
+        { name: 'Pottery Wheel', icon: '🏺', desc: 'Spinning lathe, glaze firing & acoustics' },
+        { name: 'Clay Sandbox', icon: '🫧', desc: 'Soft-body squish, wire cut & merge' },
         { name: 'Clay Studio', icon: '🎨', desc: 'Sculpt & save clay art to Photos' },
         { name: 'Calculator', icon: '🧮', desc: 'Tactile polymer arithmetic' },
         { name: 'Reminders', icon: '☑️', desc: 'Interactive clay checklists' },
@@ -4764,6 +4923,7 @@ body.bench-mat::after {
           <canvas class="studio-canvas" id="studioCanvas" width="320" height="240"></canvas>
           <div class="pill-tabs" style="margin-top:1.2cqh;justify-content:center">
             <button class="pill-tab ${studioTool === 'brush' ? 'active' : ''}" data-studio-tool="brush" type="button">Brush</button>
+            <button class="pill-tab ${studioTool === 'swirl' ? 'active' : ''}" data-studio-tool="swirl" type="button">Marble Swirl</button>
             ${stamps.map(st => `<button class="pill-tab ${studioTool === 'stamp' && studioStamp === st ? 'active' : ''}" data-studio-tool="stamp" data-studio-stamp="${st}" type="button">${st}</button>`).join('')}
           </div>
           <div class="row" style="margin-top:1cqh;justify-content:center;flex-wrap:wrap;gap:1.6cqw">
@@ -4780,6 +4940,60 @@ body.bench-mat::after {
           </div>
         `);
       }
+    } else if (name === 'Pottery Wheel') {
+      const stageLabels = ['Raw Clay', 'Bisque 980°C', 'Glaze 1220°C'];
+      const wheelTools = [['shape', 'Shape'], ['center', 'Center'], ['carve', 'Carve'], ['smooth', 'Smooth']];
+      const presets = [['amphora', 'Amphora'], ['bowl', 'Bowl'], ['vase', 'Vase']];
+      body = section('Drag Spinning Clay Wall to Throw', `
+        <div class="sim-stage" id="potteryStage">
+          <canvas class="sim-canvas" id="potteryCanvas" width="320" height="230" aria-label="Interactive spinning pottery wheel canvas"></canvas>
+        </div>
+        <div class="sim-stats">
+          <span class="sim-chip" id="potStageBadge">${stageLabels[potState.glazeStage]}</span>
+          <span id="potMetrics">Wobble: ${Math.round(potState.wobble * 100)}% &middot; Height: ${Math.round(potState.heightScale * 100)}%</span>
+        </div>
+        <div class="pill-tabs" style="justify-content:center;margin-bottom:1cqh">
+          ${wheelTools.map(([k, lbl]) => `<button class="pill-tab ${potState.tool === k ? 'active' : ''}" data-pot-tool="${k}" type="button">${lbl}</button>`).join('')}
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:1.1cqw;justify-content:center;margin-bottom:1cqh">
+          ${presets.map(([k, lbl]) => `<button class="clay-btn ${potState.preset === k ? 'primary' : ''}" data-pot-preset="${k}" type="button">${lbl}</button>`).join('')}
+          <button class="clay-btn" data-action="pot-use-mix" type="button">Mixed Clay</button>
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:1.1cqw;justify-content:center;margin-bottom:1cqh">
+          <button class="clay-btn ${potState.glazeStage === 2 ? 'green' : ''}" data-action="pot-fire" type="button">${potState.glazeStage < 2 ? '&#128293; Fire Kiln' : '&#128167; Re-Wet'}</button>
+          <button class="clay-btn primary" data-action="pot-tap" type="button">&#127925; Tap Pitch</button>
+          <button class="clay-btn" data-action="pot-pull" type="button">Pull Tall</button>
+          <button class="clay-btn" data-action="pot-flare" type="button">Flare Rim</button>
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:1.1cqw;justify-content:center">
+          <button class="clay-btn green" data-action="pot-save" type="button">Save Photos</button>
+          <button class="clay-btn" data-action="pot-wallpaper" type="button">Wallpaper</button>
+        </div>
+      `);
+    } else if (name === 'Clay Sandbox') {
+      const sbTools = [['grab', 'Grab'], ['squish', 'Squish'], ['cut', 'Wire Cut ✂'], ['merge', 'Knead']];
+      body = section('Soft-Body Verlet Polymer Physics', `
+        <div class="sim-stage" id="sandboxStage">
+          <canvas class="sim-canvas ${sbState.tool === 'cut' ? 'wire-tool' : ''}" id="sandboxCanvas" width="320" height="230" aria-label="Interactive soft-body clay physics sandbox"></canvas>
+        </div>
+        <div class="sim-stats">
+          <span class="sim-chip" id="sbBlobCount">Blobs: ${sbState.blobs.length}</span>
+          <span>${esc(softProfile().label)} &middot; ${sbState.zeroG ? 'Zero-G' : (state.tiltEnabled ? 'Tilt Gravity' : 'Earth G')}</span>
+        </div>
+        <div class="pill-tabs" style="justify-content:center;margin-bottom:1cqh">
+          ${sbTools.map(([k, lbl]) => `<button class="pill-tab ${sbState.tool === k ? 'active' : ''}" data-sb-tool="${k}" type="button">${lbl}</button>`).join('')}
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:1.1cqw;justify-content:center;margin-bottom:1cqh">
+          <button class="clay-btn primary" data-action="sb-spawn" type="button">+ Drop Clay</button>
+          <button class="clay-btn" data-action="sb-slice-one" type="button">Slice ✂</button>
+          <button class="clay-btn" data-action="sb-shake" type="button">Shake!</button>
+          <button class="clay-btn ${sbState.zeroG ? 'green' : ''}" data-action="sb-zerog" type="button">${sbState.zeroG ? 'Zero-G On' : 'Zero-G'}</button>
+        </div>
+        <div class="row" style="flex-wrap:wrap;gap:1.1cqw;justify-content:center">
+          <button class="clay-btn" data-action="sb-reset" type="button">Reset Blobs</button>
+          <button class="clay-btn green" data-action="sb-save" type="button">Save Photos</button>
+        </div>
+      `);
     }
 
     return `
@@ -4814,6 +5028,72 @@ body.bench-mat::after {
   }
 
   let studioAbort = null;
+  function canvasPoint(canvas, e) {
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - r.left) / (r.width || 1)) * canvas.width,
+      y: ((e.clientY - r.top) / (r.height || 1)) * canvas.height
+    };
+  }
+  function drawClaySphere(ctx, x, y, r, color, shine = 1, swirl = '') {
+    ctx.save();
+    ctx.shadowColor = 'rgba(22, 8, 26, 0.42)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1.5;
+    ctx.shadowOffsetY = 3;
+    const g = ctx.createRadialGradient(x - r * 0.34, y - r * 0.34, r * 0.12, x, y, r);
+    g.addColorStop(0, shine > 0.5 ? '#fff7ea' : color);
+    g.addColorStop(0.28, color);
+    g.addColorStop(1, color);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (swirl) {
+      ctx.save();
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(x + r * 0.32, y + r * 0.18, r * 0.72, 0, Math.PI * 2);
+      ctx.fillStyle = swirl;
+      ctx.globalAlpha = 0.65;
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function saveSimSnapshot(canvasId, label, asWallpaper = false) {
+    const c = $('#' + canvasId);
+    if (!c) return;
+    const url = c.toDataURL('image/png');
+    if (asWallpaper) {
+      state.customWallpaperDataUrl = url;
+      syncCustomWallpaper();
+      saveState();
+      AudioFX.playChime();
+      toast(`${label} set as Wallpaper!`);
+    } else {
+      state.photos.unshift({ id: 'sim' + Date.now(), label, type: 'dataUrl', dataUrl: url });
+      saveState();
+      AudioFX.playChime();
+      toast(`${label} saved to Photos!`);
+    }
+  }
+  function splitBlobWithLine(b, p1, p2) {
+    const vx = p2.x - p1.x, vy = p2.y - p1.y;
+    const lenSq = vx * vx + vy * vy || 1;
+    const t = clamp(((b.cx - p1.x) * vx + (b.cy - p1.y) * vy) / lenSq, 0, 1);
+    const closestX = p1.x + vx * t, closestY = p1.y + vy * t;
+    if (Math.hypot(b.cx - closestX, b.cy - closestY) > b.r * 0.9 || b.r < 16) return null;
+    const len = Math.sqrt(lenSq);
+    const nx = -vy / len, ny = vx / len;
+    const rA = Math.max(13, b.r * 0.72);
+    const rB = Math.max(13, b.r * 0.69);
+    const b1 = createSoftBlob(b.cx + nx * (rA * 0.7), b.cy + ny * (rA * 0.7), rA, b.color, b.swirl);
+    const b2 = createSoftBlob(b.cx - nx * (rB * 0.7), b.cy - ny * (rB * 0.7), rB, b.swirl || b.color, b.swirl ? b.color : '');
+    b1.nodes.forEach(n => { n.ox -= nx * 1.6; n.oy -= ny * 1.6; });
+    b2.nodes.forEach(n => { n.ox += nx * 1.6; n.oy += ny * 1.6; });
+    return [b1, b2];
+  }
   function updateClockAnalog() {
     const svg = $('#worldAnalogSvg');
     if (!svg) return false;
@@ -4864,6 +5144,13 @@ body.bench-mat::after {
             ctx.restore();
             continue;
           }
+          if (s.kind === 'swirl') {
+            for (let i = 0; i < s.pts.length; i++) {
+              const p = s.pts[i];
+              drawClaySphere(ctx, p.x, p.y, s.size * 0.52, s.color, 1, s.colorB);
+            }
+            continue;
+          }
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           ctx.beginPath();
@@ -4878,28 +5165,471 @@ body.bench-mat::after {
       };
       redraw();
       let drawing = null;
-      const toPt = e => {
-        const r = canvas.getBoundingClientRect();
-        return { x: ((e.clientX - r.left) / r.width) * canvas.width, y: ((e.clientY - r.top) / r.height) * canvas.height };
-      };
       canvas.addEventListener('pointerdown', e => {
-        const pt = toPt(e);
+        const pt = canvasPoint(canvas, e);
         if (studioTool === 'stamp') {
           studioStrokes.push({ kind: 'stamp', stamp: studioStamp, color: studioColor, size: studioSize, x: pt.x, y: pt.y });
           AudioFX.playSquish();
           redraw();
           return;
         }
-        drawing = { kind: 'stroke', color: studioColor, size: studioSize, pts: [pt] };
+        if (studioTool === 'swirl') {
+          drawing = { kind: 'swirl', color: state.mixColA || studioColor, colorB: state.mixColB || '#f2e0c4', size: studioSize, pts: [pt] };
+        } else {
+          drawing = { kind: 'stroke', color: studioColor, size: studioSize, pts: [pt] };
+        }
         studioStrokes.push(drawing);
         redraw();
       }, { signal: studioAbort.signal });
       canvas.addEventListener('pointermove', e => {
         if (!drawing) return;
-        drawing.pts.push(toPt(e));
+        drawing.pts.push(canvasPoint(canvas, e));
         redraw();
       }, { signal: studioAbort.signal });
       window.addEventListener('pointerup', () => { drawing = null; }, { signal: studioAbort.signal });
+    }
+    if (name === 'Pottery Wheel') {
+      const canvas = $('#potteryCanvas');
+      const stage = $('#potteryStage');
+      if (!canvas) return;
+      if (potteryAbort) potteryAbort.abort();
+      potteryAbort = new AbortController();
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const cx = W * 0.5, baseY = H - 28, maxH = 158, maxR = 112;
+      let dragging = false, paused = false;
+
+      const shapeAt = pt => {
+        const N = potState.slices.length;
+        const potH = maxH * potState.heightScale;
+        const normY = clamp((baseY - pt.y) / potH, 0, 1);
+        const targetIdx = normY * (N - 1);
+        const targetR = clamp(Math.abs(pt.x - cx) / maxR, 0.14, 0.88);
+        const yieldRate = potState.glazeStage === 2 ? 0.05 : (potState.glazeStage === 1 ? 0.14 : 0.36);
+
+        if (potState.tool === 'center') {
+          potState.wobble = Math.max(0, potState.wobble * 0.88 - 0.004);
+          return;
+        }
+        let volShift = 0;
+        for (let i = 0; i < N; i++) {
+          const d = Math.abs(i - targetIdx);
+          if (d > 7) continue;
+          const w = Math.exp(-(d * d) / 10);
+          if (potState.tool === 'carve') {
+            potState.grooves[i] = clamp(potState.grooves[i] + (Math.sin(potState.theta * 3 + i) * 0.025 - 0.02) * w * yieldRate, -0.075, 0.06);
+          } else if (potState.tool === 'smooth') {
+            const prev = potState.slices[Math.max(0, i - 1)];
+            const next = potState.slices[Math.min(N - 1, i + 1)];
+            potState.slices[i] += ((prev + next) * 0.5 - potState.slices[i]) * w * 0.48;
+            potState.grooves[i] *= (1 - 0.35 * w);
+          } else {
+            const oldR = potState.slices[i];
+            const nxtR = clamp(oldR + (targetR - oldR) * w * yieldRate, 0.15, 0.88);
+            volShift += oldR - nxtR;
+            potState.slices[i] = nxtR;
+          }
+        }
+        if (potState.tool === 'shape') {
+          potState.heightScale = clamp(potState.heightScale + volShift * 0.032, 0.72, 1.32);
+        }
+        const mEl = $('#potMetrics');
+        if (mEl) mEl.textContent = `Wobble: ${Math.round(potState.wobble * 100)}% · Height: ${Math.round(potState.heightScale * 100)}%`;
+      };
+
+      canvas.addEventListener('pointerdown', e => {
+        if (e.button !== undefined && e.button !== 0) return;
+        dragging = true;
+        canvas.classList.add('grabbing');
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        shapeAt(canvasPoint(canvas, e));
+        AudioFX.playSquish();
+      }, { signal: potteryAbort.signal });
+      canvas.addEventListener('pointermove', e => {
+        if (!dragging) return;
+        shapeAt(canvasPoint(canvas, e));
+      }, { signal: potteryAbort.signal });
+      const stopDrag = () => { dragging = false; canvas.classList.remove('grabbing'); };
+      canvas.addEventListener('lostpointercapture', stopDrag, { signal: potteryAbort.signal });
+      window.addEventListener('pointerup', stopDrag, { signal: potteryAbort.signal });
+
+      stage?.addEventListener('contentvisibilityautostatechange', e => {
+        paused = e.skipped;
+        if (!paused && !potteryRaf && activeApp === 'Pottery Wheel') potteryRaf = requestAnimationFrame(renderPottery);
+      }, { signal: potteryAbort.signal });
+
+      const renderPottery = () => {
+        if (activeApp !== 'Pottery Wheel' || paused) { potteryRaf = 0; return; }
+        potState.theta += (potState.rpm * 0.095) * (dragging ? 0.72 : 1);
+        if (potState.ringPulse > 0) potState.ringPulse = Math.max(0, potState.ringPulse - 0.035);
+
+        ctx.clearRect(0, 0, W, H);
+        const bg = ctx.createRadialGradient(cx, H * 0.36, 12, cx, H * 0.5, 190);
+        bg.addColorStop(0, '#51375a');
+        bg.addColorStop(1, '#1e1227');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+
+        // Spinning aluminum & wood bat wheel head
+        ctx.save();
+        ctx.fillStyle = '#3b2421';
+        ctx.beginPath();
+        ctx.ellipse(cx, baseY + 7, 118, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#8b5d44';
+        ctx.beginPath();
+        ctx.ellipse(cx, baseY + 2, 114, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Rotating bat guide marker
+        ctx.strokeStyle = 'rgba(255, 240, 212, 0.35)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(potState.theta) * 86, baseY + 2 + Math.sin(potState.theta) * 9);
+        ctx.lineTo(cx + Math.cos(potState.theta) * 105, baseY + 2 + Math.sin(potState.theta) * 12);
+        ctx.stroke();
+        ctx.restore();
+
+        const N = potState.slices.length;
+        const potH = maxH * potState.heightScale;
+        const stepY = potH / (N - 1);
+        const baseClay = potState.glazeStage === 2 ? potState.glazeColor : (potState.glazeStage === 1 ? mixHex(potState.clayHex, '#e2a384', 65) : potState.clayHex);
+        const wobShift = Math.sin(potState.theta) * potState.wobble * 18;
+
+        for (let i = 0; i < N - 1; i++) {
+          const yB = baseY - i * stepY;
+          const yT = yB - stepY - 0.8;
+          const tB = i / (N - 1), tT = (i + 1) / (N - 1);
+          const xOffB = wobShift * (0.25 + tB * 0.75);
+          const xOffT = wobShift * (0.25 + tT * 0.75);
+          const rB = (potState.slices[i] + potState.grooves[i]) * maxR;
+          const rT = (potState.slices[i + 1] + potState.grooves[i + 1]) * maxR;
+
+          const grad = ctx.createLinearGradient(cx - rB, yB, cx + rB, yB);
+          const rib = Math.sin(potState.theta * 2 + i * 0.55) * 0.08;
+          grad.addColorStop(0, mixHex(baseClay, '#210c16', 58));
+          grad.addColorStop(0.28 + clamp(rib, -0.06, 0.06), mixHex(baseClay, '#fff5e2', potState.glazeStage === 2 ? 42 : 66));
+          grad.addColorStop(0.75, baseClay);
+          grad.addColorStop(1, mixHex(baseClay, '#180710', 44));
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(cx + xOffB - rB, yB);
+          ctx.lineTo(cx + xOffT - rT, yT);
+          ctx.lineTo(cx + xOffT + rT, yT);
+          ctx.lineTo(cx + xOffB + rB, yB);
+          ctx.closePath();
+          ctx.fill();
+
+          if (potState.glazeStage === 2) {
+            ctx.fillStyle = 'rgba(255, 250, 238, 0.22)';
+            ctx.fillRect(cx + xOffT - rT * 0.62, yT, rT * 0.16, stepY + 1);
+          }
+        }
+
+        // Open hollow vessel top rim & dark inner mouth
+        const topX = cx + wobShift;
+        const topY = baseY - potH;
+        const topR = clamp((potState.slices[N - 1] + potState.grooves[N - 1]) * maxR, 14, maxR);
+        ctx.fillStyle = mixHex(baseClay, '#14060d', 28);
+        ctx.beginPath();
+        ctx.ellipse(topX, topY, topR * 0.78, topR * 0.21, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = mixHex(baseClay, '#fff4de', 45);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(topX, topY, topR, topR * 0.25, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Acoustic tap wave visualization
+        if (potState.ringPulse > 0) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(255, 240, 198, ${potState.ringPulse * 0.75})`;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.ellipse(topX, H * 0.54, 42 + (1 - potState.ringPulse) * 95, 28 + (1 - potState.ringPulse) * 58, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        potteryRaf = requestAnimationFrame(renderPottery);
+      };
+      potteryRaf = requestAnimationFrame(renderPottery);
+    }
+    if (name === 'Clay Sandbox') {
+      const canvas = $('#sandboxCanvas');
+      const stage = $('#sandboxStage');
+      if (!canvas) return;
+      if (sandboxAbort) sandboxAbort.abort();
+      sandboxAbort = new AbortController();
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      let paused = false, dragBlob = null, dragNode = null, dragPt = null, wireStart = null, wireEnd = null;
+
+      const stepPhysics = () => {
+        const prof = softProfile();
+        const isSoft = state.claySoftness === 'soft', isFirm = state.claySoftness === 'firm';
+        const stiff = isSoft ? 0.22 : (isFirm ? 0.64 : 0.40);
+        const pressK = isSoft ? 0.24 : (isFirm ? 0.56 : 0.40);
+        const damp = isSoft ? 0.965 : (isFirm ? 0.986 : 0.974);
+        const gy = sbState.zeroG ? 0 : 0.22;
+        const gx = sbState.zeroG ? 0 : (state.tiltEnabled ? stageTiltX * 0.36 : 0);
+
+        for (let sub = 0; sub < 5; sub++) {
+          for (const b of sbState.blobs) {
+            const N = b.nodes.length;
+            const edgeLen = 2 * b.r * Math.sin(Math.PI / N);
+            // Center hub Verlet step
+            const hvx = (b.cx - b.ocx) * damp + gx;
+            const hvy = (b.cy - b.ocy) * damp + gy;
+            b.ocx = b.cx; b.ocy = b.cy;
+            b.cx += hvx; b.cy += hvy;
+
+            let sumX = 0, sumY = 0;
+            for (const n of b.nodes) {
+              const vx = (n.x - n.ox) * damp + gx;
+              const vy = (n.y - n.oy) * damp + gy;
+              n.ox = n.x; n.oy = n.y;
+              n.x += vx; n.y += vy;
+              sumX += n.x; sumY += n.y;
+            }
+            // Pull hub lightly toward centroid
+            b.cx += (sumX / N - b.cx) * 0.2;
+            b.cy += (sumY / N - b.cy) * 0.2;
+
+            // Grabbed point or Thumb Squish tool
+            if (dragPt) {
+              if (sbState.tool === 'grab' && dragNode) {
+                dragNode.x += (dragPt.x - dragNode.x) * 0.36;
+                dragNode.y += (dragPt.y - dragNode.y) * 0.36;
+                dragBlob.cx += (dragPt.x - dragBlob.cx) * 0.14;
+                dragBlob.cy += (dragPt.y - dragBlob.cy) * 0.14;
+              } else if (sbState.tool === 'squish') {
+                for (const n of b.nodes) {
+                  const dx = n.x - dragPt.x, dy = n.y - dragPt.y;
+                  const dist = Math.hypot(dx, dy);
+                  if (dist > 0 && dist < 52) {
+                    const push = (1 - dist / 52) * 3.2;
+                    n.x += (dx / dist) * push * 0.85;
+                    n.y += Math.max(0.5, (dy / dist) * push + 1.4);
+                  }
+                }
+              }
+            }
+
+            // Perimeter springs + radial hub struts
+            for (let i = 0; i < N; i++) {
+              const a = b.nodes[i], nxt = b.nodes[(i + 1) % N];
+              const dx = nxt.x - a.x, dy = nxt.y - a.y;
+              const dist = Math.hypot(dx, dy) || 0.001;
+              const diff = ((edgeLen - dist) / dist) * 0.5 * stiff;
+              a.x -= dx * diff; a.y -= dy * diff;
+              nxt.x += dx * diff; nxt.y += dy * diff;
+
+              const rx = a.x - b.cx, ry = a.y - b.cy;
+              const rDist = Math.hypot(rx, ry) || 0.001;
+              const rDiff = ((b.r - rDist) / rDist) * stiff * 0.65;
+              a.x += rx * rDiff * 0.82; a.y += ry * rDiff * 0.82;
+              b.cx -= rx * rDiff * 0.18; b.cy -= ry * rDiff * 0.18;
+            }
+
+            // Shoelace signed-area conservation -> squeeze side bulge
+            let area = 0;
+            for (let i = 0; i < N; i++) {
+              const a = b.nodes[i], nxt = b.nodes[(i + 1) % N];
+              area += (a.x * nxt.y - nxt.x * a.y) * 0.5;
+            }
+            const err = clamp((b.area0 - Math.abs(area)) / (b.area0 + 1), -0.6, 0.85) * pressK;
+            for (let i = 0; i < N; i++) {
+              const a = b.nodes[i], nxt = b.nodes[(i + 1) % N];
+              const ex = nxt.x - a.x, ey = nxt.y - a.y;
+              const el = Math.hypot(ex, ey) || 1;
+              const outX = ey / el, outY = -ex / el;
+              a.x += outX * err; a.y += outY * err;
+              nxt.x += outX * err; nxt.y += outY * err;
+            }
+
+            // Wall & floor collision + soft clay sliding friction (leave craft floor lip)
+            for (const n of b.nodes) {
+              if (n.x < 10) n.x = 10;
+              if (n.x > W - 10) n.x = W - 10;
+              if (n.y < 10) n.y = 10;
+              if (n.y > H - 12) { n.y = H - 12; n.ox += (n.x - n.ox) * 0.25; }
+            }
+            b.cx = clamp(b.cx, Math.max(14, b.r * 0.65), W - Math.max(14, b.r * 0.65));
+            b.cy = clamp(b.cy, Math.max(14, b.r * 0.65), H - Math.max(16, b.r * 0.65));
+          }
+
+          // Pairwise blob collision OR knead-merge
+          for (let i = 0; i < sbState.blobs.length; i++) {
+            for (let j = i + 1; j < sbState.blobs.length; j++) {
+              const b1 = sbState.blobs[i], b2 = sbState.blobs[j];
+              const dx = b2.cx - b1.cx, dy = b2.cy - b1.cy;
+              const d = Math.hypot(dx, dy) || 0.001;
+              const minD = (b1.r + b2.r) * 0.92;
+              if (d < minD) {
+                if (sbState.tool === 'merge' && d < minD * 0.72) {
+                  const nr = Math.min(54, Math.hypot(b1.r, b2.r));
+                  const merged = createSoftBlob((b1.cx + b2.cx) * 0.5, (b1.cy + b2.cy) * 0.5, nr, b1.color, b2.color);
+                  sbState.blobs.splice(j, 1);
+                  sbState.blobs.splice(i, 1, merged);
+                  const cntEl = $('#sbBlobCount');
+                  if (cntEl) cntEl.textContent = `Blobs: ${sbState.blobs.length}`;
+                  AudioFX.playSquish();
+                  toast('Clay blobs kneaded together!');
+                  return;
+                }
+                const push = (minD - d) * 0.45;
+                const px = (dx / d) * push, py = (dy / d) * push;
+                b1.cx -= px; b1.cy -= py;
+                b2.cx += px; b2.cy += py;
+                for (const n of b1.nodes) { n.x -= px * 0.7; n.y -= py * 0.7; }
+                for (const n of b2.nodes) { n.x += px * 0.7; n.y += py * 0.7; }
+              }
+            }
+          }
+        }
+      };
+
+      const drawSoftBlob = b => {
+        const N = b.nodes.length;
+        ctx.save();
+        ctx.beginPath();
+        const firstMidX = (b.nodes[N - 1].x + b.nodes[0].x) * 0.5;
+        const firstMidY = (b.nodes[N - 1].y + b.nodes[0].y) * 0.5;
+        ctx.moveTo(firstMidX, firstMidY);
+        for (let i = 0; i < N; i++) {
+          const cur = b.nodes[i], nxt = b.nodes[(i + 1) % N];
+          ctx.quadraticCurveTo(cur.x, cur.y, (cur.x + nxt.x) * 0.5, (cur.y + nxt.y) * 0.5);
+        }
+        ctx.closePath();
+
+        ctx.shadowColor = 'rgba(12, 4, 22, 0.52)';
+        ctx.shadowBlur = 7;
+        ctx.shadowOffsetY = 4;
+        const g = ctx.createRadialGradient(b.cx - b.r * 0.34, b.cy - b.r * 0.34, b.r * 0.1, b.cx, b.cy, b.r * 1.35);
+        g.addColorStop(0, mixHex(b.color, '#fff8ea', state.clayFinish === 'glaze' ? 28 : 48));
+        g.addColorStop(0.55, b.color);
+        g.addColorStop(1, mixHex(b.color, '#1c0918', 58));
+        ctx.fillStyle = g;
+        ctx.fill();
+
+        ctx.shadowColor = 'transparent';
+        ctx.save();
+        ctx.clip();
+        if (b.swirl) {
+          const sg = ctx.createRadialGradient(b.cx + b.r * 0.25, b.cy + b.r * 0.15, b.r * 0.1, b.cx + b.r * 0.25, b.cy + b.r * 0.15, b.r * 0.9);
+          sg.addColorStop(0, b.swirl);
+          sg.addColorStop(0.65, b.swirl);
+          sg.addColorStop(1, 'transparent');
+          ctx.fillStyle = sg;
+          ctx.globalAlpha = 0.58;
+          ctx.fillRect(b.cx - b.r * 1.5, b.cy - b.r * 1.5, b.r * 3, b.r * 3);
+        }
+        if (state.clayFinish === 'glaze') {
+          ctx.globalAlpha = 0.42;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(b.cx - b.r * 0.28, b.cy - b.r * 0.32, b.r * 0.32, b.r * 0.14, -0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (state.clayFinish === 'speckled') {
+          ctx.globalAlpha = 0.48;
+          ctx.fillStyle = '#241410';
+          for (let k = 0; k < 5; k++) {
+            const a = k * 1.25;
+            ctx.beginPath();
+            ctx.arc(b.cx + Math.cos(a) * b.r * 0.45, b.cy + Math.sin(a) * b.r * 0.45, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(255, 245, 224, 0.48)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      canvas.addEventListener('pointerdown', e => {
+        if (e.button !== undefined && e.button !== 0) return;
+        const pt = canvasPoint(canvas, e);
+        dragPt = pt;
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        if (sbState.tool === 'cut') {
+          wireStart = pt; wireEnd = pt;
+          return;
+        }
+        if (sbState.tool === 'squish') { AudioFX.playSquish(); return; }
+        let best = null, bestD = 54;
+        for (const b of sbState.blobs) {
+          const dHub = Math.hypot(b.cx - pt.x, b.cy - pt.y);
+          if (dHub < b.r + 18 && dHub < bestD) { best = b; bestD = dHub; }
+        }
+        if (best) {
+          dragBlob = best;
+          dragNode = best.nodes.reduce((acc, n) => Math.hypot(n.x - pt.x, n.y - pt.y) < Math.hypot(acc.x - pt.x, acc.y - pt.y) ? n : acc, best.nodes[0]);
+          canvas.classList.add('grabbing');
+          AudioFX.playSquish();
+        }
+      }, { signal: sandboxAbort.signal });
+
+      canvas.addEventListener('pointermove', e => {
+        const pt = canvasPoint(canvas, e);
+        if (wireStart) { wireEnd = pt; return; }
+        if (dragPt) dragPt = pt;
+      }, { signal: sandboxAbort.signal });
+
+      const finishSbDrag = () => {
+        if (wireStart && wireEnd && Math.hypot(wireEnd.x - wireStart.x, wireEnd.y - wireStart.y) > 18) {
+          const next = [];
+          let cutCount = 0;
+          for (const b of sbState.blobs) {
+            const parts = splitBlobWithLine(b, wireStart, wireEnd);
+            if (parts) { next.push(...parts); cutCount++; }
+            else next.push(b);
+          }
+          if (cutCount) {
+            sbState.blobs = next.slice(0, 10);
+            const cntEl = $('#sbBlobCount');
+            if (cntEl) cntEl.textContent = `Blobs: ${sbState.blobs.length}`;
+            AudioFX.playSquish();
+            toast(`Wire sliced ${cutCount} clay blob${cutCount > 1 ? 's' : ''}!`);
+          }
+        }
+        dragBlob = null; dragNode = null; dragPt = null; wireStart = null; wireEnd = null;
+        canvas.classList.remove('grabbing');
+      };
+      canvas.addEventListener('lostpointercapture', finishSbDrag, { signal: sandboxAbort.signal });
+      window.addEventListener('pointerup', finishSbDrag, { signal: sandboxAbort.signal });
+
+      stage?.addEventListener('contentvisibilityautostatechange', e => {
+        paused = e.skipped;
+        if (!paused && !sandboxRaf && activeApp === 'Clay Sandbox') sandboxRaf = requestAnimationFrame(renderSandbox);
+      }, { signal: sandboxAbort.signal });
+
+      const renderSandbox = () => {
+        if (activeApp !== 'Clay Sandbox' || paused) { sandboxRaf = 0; return; }
+        stepPhysics();
+        ctx.clearRect(0, 0, W, H);
+        const bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, '#3d284b');
+        bg.addColorStop(1, '#22142b');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(255, 232, 200, 0.08)';
+        ctx.fillRect(0, H - 11, W, 11);
+        for (const b of sbState.blobs) drawSoftBlob(b);
+        if (wireStart && wireEnd) {
+          ctx.save();
+          ctx.strokeStyle = '#ffd59a';
+          ctx.lineWidth = 2.4;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.moveTo(wireStart.x, wireStart.y);
+          ctx.lineTo(wireEnd.x, wireEnd.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+        sandboxRaf = requestAnimationFrame(renderSandbox);
+      };
+      sandboxRaf = requestAnimationFrame(renderSandbox);
     }
   }
 
@@ -5421,7 +6151,14 @@ body.bench-mat::after {
       sculptTool = scTool.dataset.sculptTool;
       if (scTool.dataset.sculptCharm) sculptCharm = scTool.dataset.sculptCharm;
       $$('[data-sculpt-tool]').forEach(el => el.classList.toggle('active', el === scTool));
-      toast(sculptTool === 'blob' ? 'Roll Clay tool active' : sculptTool === 'charm' ? `Charm ${sculptCharm} stamp active` : 'Thumb Dent tool active');
+      const toolToast = {
+        blob: 'Roll Clay tool active',
+        smudge: 'Finger Smudge tool active',
+        marble: 'Clay Marbles active · Tap to drop!',
+        charm: `Charm ${sculptCharm} stamp active`,
+        dent: 'Thumb Dent tool active'
+      };
+      toast(toolToast[sculptTool] || 'Thumb Dent tool active');
       return;
     }
     const scCol = e.target.closest('[data-sculpt-col]');
@@ -5430,6 +6167,39 @@ body.bench-mat::after {
       if (sculptTool === 'dent') sculptTool = 'blob';
       $$('[data-sculpt-col]').forEach(el => el.classList.toggle('active', el === scCol));
       $$('[data-sculpt-tool]').forEach(el => el.classList.toggle('active', el.dataset.sculptTool === sculptTool));
+      return;
+    }
+
+    // Pottery Wheel tools & presets
+    const potToolBtn = e.target.closest('[data-pot-tool]');
+    if (potToolBtn) {
+      potState.tool = potToolBtn.dataset.potTool;
+      AudioFX.playClick();
+      $$('[data-pot-tool]').forEach(el => el.classList.toggle('active', el === potToolBtn));
+      toast(`Wheel tool: ${potToolBtn.textContent}`);
+      return;
+    }
+    const potPresetBtn = e.target.closest('[data-pot-preset]');
+    if (potPresetBtn) {
+      potState.preset = potPresetBtn.dataset.potPreset;
+      potState.slices = makePotProfile(potState.preset);
+      potState.grooves = new Array(42).fill(0);
+      potState.glazeStage = 0;
+      potState.heightScale = 1.0;
+      potState.wobble = 0.055;
+      AudioFX.playSquish();
+      renderAppView('Pottery Wheel');
+      toast(`Fresh ${potPresetBtn.textContent} centered on wheel`);
+      return;
+    }
+
+    // Clay Sandbox tools
+    const sbToolBtn = e.target.closest('[data-sb-tool]');
+    if (sbToolBtn) {
+      sbState.tool = sbToolBtn.dataset.sbTool;
+      AudioFX.playClick();
+      renderAppView('Clay Sandbox');
+      toast(`Sandbox mode: ${sbToolBtn.textContent}`);
       return;
     }
 
@@ -5657,7 +6427,7 @@ body.bench-mat::after {
       AudioFX.toggleBeat(false);
       jiggleMode = false;
       home.classList.remove('jiggle');
-      sculptMarks.length = 0; sculptBlobs.length = 0; sculptCharms.length = 0;
+      sculptMarks.length = 0; sculptBlobs.length = 0; sculptCharms.length = 0; sculptMarbles.length = 0;
       pCtx.clearRect(0, 0, pWidth, pHeight);
       setColorSchemeOverride('system');
       applyIconStyle('classic');
@@ -5817,6 +6587,98 @@ body.bench-mat::after {
       AudioFX.playChime();
       toast('Marbled wallpaper baked from Clay A & B!');
     }
+    // Pottery Wheel actions
+    if (act === 'pot-use-mix') {
+      potState.clayHex = mixHex(state.mixColA, state.mixColB, state.mixRatio);
+      potState.glazeColor = potState.clayHex;
+      potState.glazeStage = 0;
+      AudioFX.playSquish();
+      renderAppView('Pottery Wheel');
+      toast('Loaded mixed clay onto wheel!');
+    }
+    if (act === 'pot-fire') {
+      potState.glazeStage = (potState.glazeStage + 1) % 3;
+      const lbls = ['Re-wetted raw clay', 'Kiln fired: Bisque 980°C', 'Kiln fired: Gloss Glaze 1220°C'];
+      AudioFX.playCeramicTap(320 + potState.glazeStage * 90, potState.glazeStage * 0.45 + 0.25);
+      renderAppView('Pottery Wheel');
+      toast(lbls[potState.glazeStage]);
+    }
+    if (act === 'pot-tap') {
+      const avgR = potState.slices.reduce((a, b) => a + b, 0) / potState.slices.length;
+      const freq = Math.round(clamp(540 - avgR * 460 + potState.glazeStage * 105, 190, 740));
+      potState.ringPulse = 1;
+      AudioFX.playCeramicTap(freq, potState.glazeStage * 0.48 + 0.15);
+      toast(`Ceramic tone: ${freq} Hz`);
+    }
+    if (act === 'pot-pull') {
+      potState.heightScale = clamp(potState.heightScale + 0.1, 0.72, 1.32);
+      potState.slices = potState.slices.map((r, i) => clamp(r * (i > 12 ? 0.93 : 0.98), 0.15, 0.88));
+      AudioFX.playSquish();
+      const mEl = $('#potMetrics');
+      if (mEl) mEl.textContent = `Wobble: ${Math.round(potState.wobble * 100)}% · Height: ${Math.round(potState.heightScale * 100)}%`;
+      toast('Pulled walls taller');
+    }
+    if (act === 'pot-flare') {
+      const N = potState.slices.length;
+      for (let i = N - 10; i < N; i++) potState.slices[i] = clamp(potState.slices[i] + ((i - (N - 10)) / 10) * 0.08, 0.16, 0.88);
+      AudioFX.playSquish();
+      toast('Flared vessel rim outward');
+    }
+    if (act === 'pot-save') saveSimSnapshot('potteryCanvas', 'Clay Pottery');
+    if (act === 'pot-wallpaper') saveSimSnapshot('potteryCanvas', 'Clay Pottery', true);
+
+    // Clay Sandbox actions
+    if (act === 'sb-spawn') {
+      const cols = [mixHex(state.mixColA, state.mixColB, state.mixRatio), '#e65525', '#348de8', '#56b938', '#f5c036', '#8d3da8'];
+      const col = cols[sbState.blobs.length % cols.length];
+      sbState.blobs.push(createSoftBlob(70 + ((sbState.blobs.length * 47) % 180), 46, 22 + (sbState.blobs.length % 3) * 5, col));
+      if (sbState.blobs.length > 9) sbState.blobs.shift();
+      AudioFX.playSquish();
+      const cntEl = $('#sbBlobCount');
+      if (cntEl) cntEl.textContent = `Blobs: ${sbState.blobs.length}`;
+      toast('Dropped fresh soft clay blob');
+    }
+    if (act === 'sb-slice-one') {
+      const big = [...sbState.blobs].sort((a, b) => b.r - a.r)[0];
+      if (big && big.r >= 17) {
+        const idx = sbState.blobs.indexOf(big);
+        const parts = splitBlobWithLine(big, { x: big.cx - big.r, y: big.cy }, { x: big.cx + big.r, y: big.cy });
+        if (parts) {
+          sbState.blobs.splice(idx, 1, ...parts);
+          sbState.blobs = sbState.blobs.slice(0, 10);
+          AudioFX.playSquish();
+          const cntEl = $('#sbBlobCount');
+          if (cntEl) cntEl.textContent = `Blobs: ${sbState.blobs.length}`;
+          toast('Sliced largest clay blob cleanly!');
+        }
+      } else toast('Drop or knead a bigger blob first');
+    }
+    if (act === 'sb-shake') {
+      sbState.blobs.forEach((b, k) => {
+        const vx = (k % 2 === 0 ? 1 : -1) * 5.5, vy = -7.5;
+        b.ocx = b.cx - vx; b.ocy = b.cy - vy;
+        b.nodes.forEach(n => { n.ox = n.x - vx; n.oy = n.y - vy; });
+      });
+      AudioFX.playSquish();
+      toast('Shook soft-body clay box!');
+    }
+    if (act === 'sb-zerog') {
+      sbState.zeroG = !sbState.zeroG;
+      AudioFX.playClick();
+      renderAppView('Clay Sandbox');
+      toast(sbState.zeroG ? 'Zero-Gravity clay float active' : 'Clay gravity restored');
+    }
+    if (act === 'sb-reset') {
+      sbState.blobs = [
+        createSoftBlob(96, 118, 30, '#e65525'),
+        createSoftBlob(176, 98, 27, '#348de8', '#f2e0c4'),
+        createSoftBlob(238, 128, 25, '#56b938')
+      ];
+      AudioFX.playClick();
+      renderAppView('Clay Sandbox');
+      toast('Reset clay sandbox');
+    }
+    if (act === 'sb-save') saveSimSnapshot('sandboxCanvas', 'Clay Sandbox');
   });
 
   function applyPhotoAsWallpaper(photo, filterStr) {
@@ -6058,6 +6920,7 @@ body.bench-mat::after {
   function syncTiltUI() {
     $('#btnTilt')?.classList.toggle('active', Boolean(state.tiltEnabled));
     if (!state.tiltEnabled && phoneWrapEl) {
+      stageTiltX = 0; stageTiltY = 0;
       phoneWrapEl.style.setProperty('--tilt-x', '0deg');
       phoneWrapEl.style.setProperty('--tilt-y', '0deg');
       phoneWrapEl.style.setProperty('--spec-x', '20%');
@@ -6071,12 +6934,14 @@ body.bench-mat::after {
     const r = stageEl.getBoundingClientRect();
     const nx = clamp((e.clientX - r.left) / (r.width || 1), 0, 1) - 0.5;
     const ny = clamp((e.clientY - r.top) / (r.height || 1), 0, 1) - 0.5;
+    stageTiltX = nx; stageTiltY = ny;
     if (!prefersReduced()) {
       phoneWrapEl.style.setProperty('--tilt-y', `${(nx * 13).toFixed(2)}deg`);
       phoneWrapEl.style.setProperty('--tilt-x', `${(-ny * 11).toFixed(2)}deg`);
     }
     phoneWrapEl.style.setProperty('--spec-x', `${(22 + nx * 24).toFixed(1)}%`);
     phoneWrapEl.style.setProperty('--spec-y', `${(8 + ny * 16).toFixed(1)}%`);
+    if (sculptMarbles.length) scheduleDraw();
   }, { passive: true });
 
   $('#btnLock').addEventListener('click', () => $('#hwPower').click());
@@ -6190,7 +7055,7 @@ body.bench-mat::after {
     physCanvas.width = Math.max(1, Math.round(pWidth * pDpr));
     physCanvas.height = Math.max(1, Math.round(pHeight * pDpr));
     pCtx.setTransform(pDpr, 0, 0, pDpr, 0, 0);
-    if (sculptMarks.length || sculptBlobs.length || sculptCharms.length) scheduleDraw();
+    if (sculptMarks.length || sculptBlobs.length || sculptCharms.length || sculptMarbles.length) scheduleDraw();
   }
   if ('ResizeObserver' in window) new ResizeObserver(resizePhysics).observe(screen);
   resizePhysics();
@@ -6291,7 +7156,7 @@ body.bench-mat::after {
 
   screen.addEventListener('pointerdown', e => {
     if (e.button !== undefined && e.button !== 0) return;
-    if (e.target.closest('input, textarea, select, .home-indicator, .studio-canvas')) return;
+    if (e.target.closest('input, textarea, select, .home-indicator, .studio-canvas, .sim-canvas')) return;
     const sp = softProfile();
     const rect = screen.getBoundingClientRect();
     const x = clamp(e.clientX - rect.left, 0, pWidth);
@@ -6335,6 +7200,20 @@ body.bench-mat::after {
       if (sculptTool === 'blob') {
         sculptBlobs.push({ x, y, r: 9.5 * sculptSizeScale, color: sculptColor });
         if (sculptBlobs.length > 360) sculptBlobs.shift();
+      } else if (sculptTool === 'marble') {
+        sculptMarbles.push({
+          x, y,
+          vx: (seeded(sculptMarbles.length + x) - 0.5) * 160,
+          vy: -110,
+          r: 10.5 * sculptSizeScale,
+          color: sculptColor,
+          sx: 1.24, sy: 0.78
+        });
+        if (sculptMarbles.length > 18) sculptMarbles.shift();
+        AudioFX.playCeramicTap(430, 0.35);
+      } else if (sculptTool === 'smudge') {
+        sculptBlobs.push({ x, y, r: 6.5 * sculptSizeScale, color: sculptColor, smudge: true });
+        if (sculptBlobs.length > 360) sculptBlobs.shift();
       } else if (sculptTool === 'charm') {
         sculptCharms.push({ x, y, ch: sculptCharm, color: sculptColor, size: 22 * sculptSizeScale, angle: (seeded(sculptCharms.length + 1) - 0.5) * 0.4 });
         if (sculptCharms.length > 48) sculptCharms.shift();
@@ -6361,13 +7240,24 @@ body.bench-mat::after {
     const dx = p.x - pActive.last.x, dy = p.y - pActive.last.y;
     const dist = Math.hypot(dx, dy);
     if (dist > 4) {
-      if (sculptMode && sculptTool === 'blob') {
+      if (sculptMode && (sculptTool === 'blob' || sculptTool === 'smudge')) {
         const steps = Math.max(1, Math.min(10, Math.floor(dist / 4)));
         for (let s = 1; s <= steps; s++) {
           const ix = pActive.last.x + (dx * s) / steps;
           const iy = pActive.last.y + (dy * s) / steps;
-          sculptBlobs.push({ x: ix, y: iy, r: (8 + seeded(sculptBlobs.length + 1) * 2.2) * sculptSizeScale, color: sculptColor });
+          const rad = sculptTool === 'smudge'
+            ? (6 + seeded(sculptBlobs.length + s) * 4) * sculptSizeScale
+            : (8 + seeded(sculptBlobs.length + 1) * 2.2) * sculptSizeScale;
+          sculptBlobs.push({ x: ix, y: iy, r: rad, color: sculptColor });
           if (sculptBlobs.length > 360) sculptBlobs.shift();
+        }
+      }
+      // Swipe flick impulse on live home-screen marbles
+      for (const m of sculptMarbles) {
+        const md = Math.hypot(m.x - p.x, m.y - p.y);
+        if (md < m.r + 34) {
+          m.vx += clamp(dx * 16, -260, 260);
+          m.vy += clamp(dy * 16 - 40, -280, 260);
         }
       }
       if (!pActive.smear) {
@@ -6401,14 +7291,18 @@ body.bench-mat::after {
     sculptMarks.length = 0;
     sculptBlobs.length = 0;
     sculptCharms.length = 0;
+    sculptMarbles.length = 0;
     pCtx.clearRect(0, 0, pWidth, pHeight);
     toast('Clay surface smoothed fresh');
   });
 
-  function scheduleDraw() { if (!pRaf) pRaf = requestAnimationFrame(drawPhysics); }
+  let lastPhysTs = 0;
+  function scheduleDraw() { if (!pRaf) { lastPhysTs = performance.now(); pRaf = requestAnimationFrame(drawPhysics); } }
   function drawPhysics() {
     pCtx.clearRect(0, 0, pWidth, pHeight);
     const t = performance.now();
+    const dt = clamp((t - (lastPhysTs || t)) / 1000, 0.004, 0.032);
+    lastPhysTs = t;
     const sp = softProfile();
 
     // Persistent asymmetric 3D thumb dents from Sculpt Mode
@@ -6417,22 +7311,90 @@ body.bench-mat::after {
       drawClayCrater(pCtx, m.x, m.y, m.rx, m.ry, m.angle, m.seed || (i + 1), sp.alphaBoost, 0.92);
     }
 
-    // Persistent 3D extruded polymer clay blobs / rolled coils from Sculpt Mode
+    // Persistent 3D extruded polymer clay blobs / rolled coils / smudges
     for (const b of sculptBlobs) {
-      pCtx.save();
-      pCtx.shadowColor = 'rgba(22, 8, 26, 0.42)';
-      pCtx.shadowBlur = 4;
-      pCtx.shadowOffsetX = 1.5;
-      pCtx.shadowOffsetY = 3;
-      const g = pCtx.createRadialGradient(b.x - b.r * 0.34, b.y - b.r * 0.34, b.r * 0.12, b.x, b.y, b.r);
-      g.addColorStop(0, '#fff7ea');
-      g.addColorStop(0.28, b.color);
-      g.addColorStop(1, b.color);
-      pCtx.fillStyle = g;
-      pCtx.beginPath();
-      pCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      pCtx.fill();
-      pCtx.restore();
+      drawClaySphere(pCtx, b.x, b.y, b.r, b.color);
+    }
+
+    // Live gravity-driven polymer clay marbles bouncing on Dock, Island & edges
+    let marblesActive = false;
+    if (sculptMarbles.length) {
+      const scRect = screen.getBoundingClientRect();
+      const dockRect = !activeApp && !activeOverlay ? $('#dock')?.getBoundingClientRect() : null;
+      const diRect = $('#dynamicIsland')?.getBoundingClientRect();
+      const dockTop = dockRect ? dockRect.top - scRect.top : pHeight;
+      const dockLeft = dockRect ? dockRect.left - scRect.left : 0;
+      const dockRight = dockRect ? dockRect.right - scRect.left : pWidth;
+      const gx = state.tiltEnabled ? stageTiltX * 480 : 0;
+      const gy = 680;
+      const bounce = state.claySoftness === 'soft' ? 0.34 : (state.claySoftness === 'firm' ? 0.78 : 0.56);
+
+      for (let i = 0; i < sculptMarbles.length; i++) {
+        const m = sculptMarbles[i];
+        m.vx = (m.vx + gx * dt) * 0.992;
+        m.vy = (m.vy + gy * dt) * 0.994;
+        const prevY = m.y;
+        m.x += m.vx * dt;
+        m.y += m.vy * dt;
+
+        if (m.x < m.r + 6) { m.x = m.r + 6; m.vx = Math.abs(m.vx) * bounce; m.sx = 0.8; m.sy = 1.2; }
+        if (m.x > pWidth - m.r - 6) { m.x = pWidth - m.r - 6; m.vx = -Math.abs(m.vx) * bounce; m.sx = 0.8; m.sy = 1.2; }
+        if (m.y < m.r + 6) { m.y = m.r + 6; m.vy = Math.abs(m.vy) * bounce; }
+        if (m.y > pHeight - m.r - 14) {
+          m.y = pHeight - m.r - 14;
+          if (Math.abs(m.vy) > 55) { m.sx = 1.26; m.sy = 0.76; }
+          m.vy = -Math.abs(m.vy) * bounce;
+          m.vx *= 0.94;
+        }
+        // Bounce on top of the Dock shelf on Home Screen
+        if (dockRect && m.x > dockLeft && m.x < dockRight && prevY <= dockTop && m.y + m.r >= dockTop && m.vy > 0) {
+          m.y = dockTop - m.r;
+          if (Math.abs(m.vy) > 55) { m.sx = 1.24; m.sy = 0.78; }
+          m.vy = -Math.abs(m.vy) * bounce;
+          m.vx *= 0.92;
+        }
+        // Deflect off Dynamic Island pill
+        if (diRect) {
+          const diCx = (diRect.left + diRect.right) * 0.5 - scRect.left;
+          const diCy = (diRect.top + diRect.bottom) * 0.5 - scRect.top;
+          const dx = m.x - diCx, dy = m.y - diCy;
+          const dist = Math.hypot(dx / 2.2, dy);
+          if (dist > 0 && dist < m.r + 15) {
+            m.vy = Math.abs(m.vy) * 0.65 + 45;
+            m.vx += (dx > 0 ? 1 : -1) * 55;
+          }
+        }
+        // Marble-to-marble collision
+        for (let j = i + 1; j < sculptMarbles.length; j++) {
+          const o = sculptMarbles[j];
+          const dx = o.x - m.x, dy = o.y - m.y;
+          const d = Math.hypot(dx, dy) || 0.001;
+          const minD = m.r + o.r;
+          if (d < minD) {
+            const nx = dx / d, ny = dy / d;
+            const ov = (minD - d) * 0.5;
+            m.x -= nx * ov; m.y -= ny * ov; o.x += nx * ov; o.y += ny * ov;
+            const dv = (m.vx - o.vx) * nx + (m.vy - o.vy) * ny;
+            if (dv > 0) {
+              const imp = dv * (0.5 + bounce * 0.4);
+              m.vx -= imp * nx; m.vy -= imp * ny;
+              o.vx += imp * nx; o.vy += imp * ny;
+            }
+          }
+        }
+        m.sx += (1 - m.sx) * 0.18;
+        m.sy += (1 - m.sy) * 0.18;
+
+        pCtx.save();
+        pCtx.translate(m.x, m.y);
+        pCtx.scale(m.sx, m.sy);
+        drawClaySphere(pCtx, 0, 0, m.r, m.color, 1);
+        pCtx.restore();
+
+        if (Math.hypot(m.vx, m.vy) > 10 || Math.abs(gx) > 14 || Math.abs(m.sx - 1) > 0.01) {
+          marblesActive = true;
+        }
+      }
     }
 
     // Persistent 3D Sculpted Clay Charms
@@ -6503,7 +7465,7 @@ body.bench-mat::after {
       drawClayCrater(pCtx, m.x, m.y, m.rx, m.ry, m.angle, m.seed, comp * sp.alphaBoost, fade);
     }
 
-    if (pActive || impacts.length || smears.length) {
+    if (pActive || impacts.length || smears.length || marblesActive) {
       pRaf = requestAnimationFrame(drawPhysics);
     } else {
       pRaf = 0;
